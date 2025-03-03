@@ -11,6 +11,7 @@ interface DocumentType {
   data: {
     ops: any[];
   };
+  activeUsers: any[]; // add this field if you plan to use it
   __v: number;
 }
 
@@ -24,6 +25,7 @@ export const LandingPage = () => {
 
     socket.on("all-documents", (allDocuments) => {
       setDocuments(allDocuments);
+      console.log(allDocuments);
     });
     
 
