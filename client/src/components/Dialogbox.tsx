@@ -50,7 +50,6 @@ export function Dialogbox() {
               </Label>
               <Input
                 id="name"
-                defaultValue="Pedro Duarte"
                 className="col-span-3"
                 value={docName}
                 onChange={(e) => { setDocName(e.target.value); }}

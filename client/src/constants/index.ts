@@ -4,10 +4,12 @@ export const TOOLBAR_OPTIONS = [
     [{ header: [1, 2, 3, 4, 5, 6, false] }],
     [{ font: [] }],
     [{ list: "ordered" }, { list: "bullet" }],
-    ["bold", "italic", "underline"],
+    ["bold", "italic", "underline", "strike"],
     [{ color: [] }, { background: [] }],
     [{ script: "sub" }, { script: "super" }],
     [{ align: [] }],
     ["image", "blockquote", "code-block"],
-    ["clean"]
+    ["clean"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["link"]
 ];
