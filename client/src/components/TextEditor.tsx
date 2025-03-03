@@ -32,7 +32,6 @@ export const TextEditor = () => {
     const { id: documentId } = useParams();
     const debouncedFetch = useDebounce(fetchCorrections, 1000);
     const debouncedAutocomplete = useDebounce(fetchAutocomplete, 500);
-    const editorRef = useRef<HTMLDivElement>(null);
 
     // 🔹 Autocomplete position tracking
     const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -67,7 +66,7 @@ export const TextEditor = () => {
 
         setSocket(skt);
         return () => { skt.disconnect(); };
-    }, []);
+    }, [quill]);
 
     const wrapperRef = useCallback((wrapper: HTMLDivElement) => {
         if (!wrapper) return;
@@ -81,6 +80,9 @@ export const TextEditor = () => {
             modules: { toolbar: TOOLBAR_OPTIONS }
         });
         
+        // Force the editor text to always be black.
+        qul.root.style.color = "black";
+
         qul.disable();
         qul.setText("Loading...");
         setQuill(qul);

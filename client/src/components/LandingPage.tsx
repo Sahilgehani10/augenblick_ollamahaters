@@ -4,6 +4,7 @@ import { io } from "socket.io-client";
 import { UserButton, SignedIn } from "@clerk/clerk-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useTheme } from "./providers/Themeprovider";
+import { Dialogbox } from "./Dialogbox";
 
 interface DocumentType {
   _id: string;
@@ -91,23 +92,9 @@ export const LandingPage = () => {
           <h2 className="text-2xl font-semibold mb-6">
             Start a new document
           </h2>
+          <div><Dialogbox/></div>
           <div className="relative group cursor-pointer">
-            <div className="w-60 h-auto bg-white rounded-lg shadow-md overflow-hidden hover:shadow-[#c77dff]/20 hover:shadow-xl transition-all duration-300 dark:hover:shadow-[#c77dff]/30">
-              <div className="p-4 pb-2">
-                <div className="w-full aspect-[4/5] flex items-center justify-center">
-                  <div className="text-4xl">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" style={{ margin: "auto" }}>
-                      <path fill="#fbbc04" d="M6 15h12v2H6z"/>
-                      <path fill="#34a853" d="M13 7h-2v6h2z"/>
-                      <path fill="#ea4335" d="M13 7h-2v6h2z" transform="rotate(90 12 10)"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div className="px-4 pb-4 text-center">
-                <p className="text-gray-800 font-medium text-sm">Untitled</p>
-              </div>
-            </div>
+            
             {/* Highlight on hover */}
             <div className="absolute inset-0 border-2 border-transparent rounded-lg transition-colors duration-300 group-hover:border-[#c77dff]/30 pointer-events-none"></div>
           </div>
