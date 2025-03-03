@@ -3,7 +3,6 @@ import { Docs } from "./Docs";
 import { io } from "socket.io-client";
 import { UserButton, SignedIn } from "@clerk/clerk-react";
 import { ThemeToggle } from "./ThemeToggle";
-import { useTheme } from "./providers/Themeprovider";
 import { Dialogbox } from "./Dialogbox";
 
 interface DocumentType {
@@ -18,7 +17,6 @@ interface DocumentType {
 export const LandingPage = () => {
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const { theme } = useTheme();
 
   useEffect(() => {
     const socket = io(import.meta.env.VITE_SERVER_URL);
@@ -27,6 +25,7 @@ export const LandingPage = () => {
     socket.on("all-documents", (allDocuments) => {
       setDocuments(allDocuments);
     });
+    
 
     return () => {
       socket.disconnect();
