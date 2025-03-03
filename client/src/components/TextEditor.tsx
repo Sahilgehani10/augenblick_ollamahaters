@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
@@ -5,15 +7,20 @@ import { TOOLBAR_OPTIONS, SAVE_INTERVAL_MS } from '../constants';
 import { io, Socket } from 'socket.io-client';
 import { useParams } from 'react-router-dom';
 import Groq from "groq-sdk";
+import { useAuth, useUser } from "@clerk/clerk-react";
 
-// 🔹 Server Configuration
+interface ActiveUser {
+  userId: string;
+  name: string;
+  imageUrl: string;
+}
+
 const groq = new Groq({ 
   apiKey: "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", 
   dangerouslyAllowBrowser: true 
 });
 const SERVER_URL = "http://localhost:3000";
 
-// 🔹 Debounce Hook
 const useDebounce = (callback: Function, delay: number) => {
   const timer = useRef<NodeJS.Timeout>();
   return (...args: any[]) => {
@@ -29,25 +36,23 @@ export const TextEditor = () => {
     const [autocompleteOpen, setAutocompleteOpen] = useState(false);
     const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
     const [selectedSuggestion, setSelectedSuggestion] = useState(0);
+    const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
     const { id: documentId } = useParams();
+    const { getToken } = useAuth();
+    const { user: clerkUser } = useUser();
     const debouncedFetch = useDebounce(fetchCorrections, 1000);
     const debouncedAutocomplete = useDebounce(fetchAutocomplete, 500);
-
-    // 🔹 Autocomplete position tracking
     const [position, setPosition] = useState({ top: 0, left: 0 });
     const cursorPositionRef = useRef<{ index: number; length: number }>({ index: 0, length: 0 });
 
-    // 🔹 Save File Function: Retrieves plain text and saves as a Word file (.doc)
     const handleSave = () => {
         if (!quill) return;
-        // Get only the plain text (without HTML tags)
         const plainText = quill.getText();
-        // Create a Blob using the plain text and a MIME type recognized by Word
         const blob = new Blob([plainText], { type: 'application/msword' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'document.doc'; // Word file extension
+        a.download = 'document.doc';
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -67,6 +72,28 @@ export const TextEditor = () => {
         setSocket(skt);
         return () => { skt.disconnect(); };
     }, [quill]);
+    
+    // Authenticate as soon as clerkUser is available and set up active users listener
+    useEffect(() => {
+        if (!socket || !clerkUser) return;
+        console.log("Client: clerkUser available, proceeding with authentication");
+
+        getToken().then(token => {  
+            console.log("Client: Sending authentication token", token);
+            socket.emit("authenticate", token);
+        }).catch(err => {
+            console.error("Failed to get token:", err);
+        });
+    
+        socket.on("active-users", (users: ActiveUser[]) => {
+            console.log("Received active users:", users);
+            setActiveUsers(users);
+        });
+    
+        return () => {
+            socket.off("active-users");
+        };
+    }, [socket, clerkUser, getToken]);
 
     const wrapperRef = useCallback((wrapper: HTMLDivElement) => {
         if (!wrapper) return;
@@ -80,14 +107,11 @@ export const TextEditor = () => {
             modules: { toolbar: TOOLBAR_OPTIONS }
         });
         
-        // Force the editor text to always be black.
         qul.root.style.color = "black";
-
         qul.disable();
         qul.setText("Loading...");
         setQuill(qul);
 
-        // 🔹 Track cursor position
         qul.on('selection-change', (range) => {
             if (range) {
                 cursorPositionRef.current = range;
@@ -98,31 +122,34 @@ export const TextEditor = () => {
                 });
             }
         });
-
     }, []);
 
-    // 🔹 Text Change Handlers
     useEffect(() => {
         if (!socket || !quill) return;
-
-        const sendHandler = (delta: any) => {
+      
+        const sendHandler = (delta: any, oldContents: any, source: string) => {
+          if (source === 'user') {
             socket.emit("send-changes", delta);
+          }
         };
-
+      
         const receiveHandler = (delta: any) => {
-            quill.updateContents(delta);
+          const selection = quill.getSelection();
+          quill.updateContents(delta);
+          if (selection) {
+            setTimeout(() => quill.setSelection(selection), 0);
+          }
         };
-
+      
         quill.on("text-change", sendHandler);
         socket.on("receive-changes", receiveHandler);
-
+      
         return () => {
-            quill.off("text-change", sendHandler);
-            socket.off("receive-changes", receiveHandler);
+          quill.off("text-change", sendHandler);
+          socket.off("receive-changes", receiveHandler);
         };
-    }, [socket, quill]);
+      }, [socket, quill]);
 
-    // 🔹 Document Loading
     useEffect(() => {
         if (!socket || !quill) return;
 
@@ -134,13 +161,12 @@ export const TextEditor = () => {
         socket.on("load-document", loadHandler);
         socket.emit("get-document", { 
             documentId,
-            documentName: localStorage.getItem(`documentNameFor_${documentId}`) || "Untitled"
+            documentName: localStorage.getItem(`document-name-for-${documentId}`) || "Untitled"
         });
 
         return () => { socket.off("load-document", loadHandler); };
     }, [socket, quill, documentId]);
 
-    // 🔹 Auto-Save
     useEffect(() => {
         if (!socket || !quill) return;
         
@@ -154,14 +180,12 @@ export const TextEditor = () => {
         };
     }, [socket, quill]);
 
-    // 🔹 AI Suggestions
     async function fetchCorrections(text: string) {
         try {
             if (!text.trim() || text === "Loading...") {
                 setSuggestions("");
                 return;
             }
-
             const chatCompletion = await groq.chat.completions.create({
                 messages: [{
                     role: "user",
@@ -169,7 +193,6 @@ export const TextEditor = () => {
                 }],
                 model: "mixtral-8x7b-32768"
             });
-
             setSuggestions(chatCompletion.choices[0]?.message?.content || "No suggestions");
         } catch (error) {
             console.error("Groq API Error:", error);
@@ -177,48 +200,46 @@ export const TextEditor = () => {
         }
     }
 
-    // 🔹 Autocomplete Function
-    async function fetchAutocomplete(text: string) {
+    async function fetchAutocomplete(lastWord: string) {
         try {
-            if (!text.trim()) return;
-            
+            if (!lastWord.trim()) {
+                setAutocompleteOpen(false);
+                return;
+            }
             const chatCompletion = await groq.chat.completions.create({
                 messages: [{
                     role: "user",
-                    content: `Suggest 3 autocompletions for this text: "${text}"`
+                    content: `Suggest 3 autocompletions for the word "${lastWord}":`
                 }],
                 model: "mixtral-8x7b-32768",
                 max_tokens: 50
             });
-
-            const suggestions = chatCompletion.choices[0]?.message?.content
+            const newSuggestions = chatCompletion.choices[0]?.message?.content
                 ?.split('\n')
                 .filter(line => line.trim())
                 .map(line => line.replace(/^\d+\.\s*/, '').trim())
                 .slice(0, 3) || [];
-
-            setAutocompleteSuggestions(suggestions);
-            setAutocompleteOpen(suggestions.length > 0);
+            setAutocompleteSuggestions(newSuggestions);
+            setAutocompleteOpen(newSuggestions.length > 0);
         } catch (error) {
             console.error("Autocomplete error:", error);
             setAutocompleteOpen(false);
         }
     }
 
-    // 🔹 Handle Text Changes for Autocomplete
     useEffect(() => {
         if (!quill) return;
 
         const handler = (delta: any) => {
             debouncedFetch(quill.getText());
-            
-            // Get current text around cursor
+
             const cursorPos = cursorPositionRef.current.index;
-            const text = quill.getText().slice(0, cursorPos);
-            const lastWord = text.split(/\s+/).pop();
-            
+            const textBeforeCursor = quill.getText().slice(0, cursorPos);
+            const words = textBeforeCursor.split(/\s+/);
+            const lastWord = words[words.length - 1];
+
             if (lastWord && lastWord.length > 2) {
-                debouncedAutocomplete(text);
+                debouncedAutocomplete(lastWord);
             } else {
                 setAutocompleteOpen(false);
             }
@@ -228,7 +249,6 @@ export const TextEditor = () => {
         return () => quill.off("text-change", handler);
     }, [quill, debouncedFetch, debouncedAutocomplete]);
 
-    // 🔹 Handle Keyboard Navigation, including Tab for autocomplete
     useEffect(() => {
         if (!autocompleteOpen || !quill) return;
 
@@ -259,13 +279,26 @@ export const TextEditor = () => {
 
     return (
         <div style={styles.editorContainer}>
-            {/* Save Button */}
             <button style={styles.saveButton} onClick={handleSave}>
                 Save as Word File
             </button>
+            
+            <div style={styles.activeUsersContainer}>
+                <h4 style={styles.activeUsersHeading}>Currently Editing:</h4>
+                {activeUsers.map((user) => (
+                    <div key={user.userId} style={styles.userBadge}>
+                        <img 
+                            src={user.imageUrl} 
+                            alt={user.name}
+                            style={styles.userAvatar}
+                        />
+                        <span style={styles.userName}>{user.name}</span>
+                    </div>
+                ))}
+            </div>
+
             <div ref={wrapperRef} style={styles.editor}></div>
             
-            {/* Suggestions Panel */}
             {suggestions && (
                 <div style={styles.suggestionsContainer}>
                     <h3 style={styles.suggestionsHeader}>AI Suggestions:</h3>
@@ -275,8 +308,7 @@ export const TextEditor = () => {
                 </div>
             )}
 
-            {/* Autocomplete Dropdown */}
-            {autocompleteOpen && (
+            {autocompleteOpen && autocompleteSuggestions.length > 0 && (
                 <div style={{
                     ...styles.autocompleteContainer,
                     top: position.top,
@@ -308,7 +340,6 @@ export const TextEditor = () => {
     );
 };
 
-// 🔹 Updated Styles
 const styles = {
     editorContainer: {
         display: 'flex',
@@ -328,6 +359,39 @@ const styles = {
         border: 'none',
         borderRadius: '4px',
         cursor: 'pointer'
+    },
+    activeUsersContainer: {
+        position: 'fixed' as const,
+        top: '1rem',
+        right: '1rem',
+        backgroundColor: 'white',
+        padding: '1rem',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        zIndex: 1000,
+        maxWidth: '250px'
+    },
+    activeUsersHeading: {
+        margin: '0 0 1rem 0',
+        fontSize: '1rem',
+        color: '#2c3e50'
+    },
+    userBadge: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        margin: '0.5rem 0',
+        padding: '0.25rem',
+        borderRadius: '4px'
+    },
+    userAvatar: {
+        width: '32px',
+        height: '32px',
+        borderRadius: '50%'
+    },
+    userName: {
+        fontSize: '0.9rem',
+        color: '#34495e'
     },
     editor: {
         flex: 1,
@@ -363,7 +427,7 @@ const styles = {
         borderRadius: '4px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         zIndex: 1000,
-        minWidth: '200px'
+        minWidth: '250px'
     },
     autocompleteItem: {
         padding: '8px 12px',
