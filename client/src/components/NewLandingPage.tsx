@@ -40,10 +40,11 @@ const NewLandingPage: React.FC = () => {
             </a>
           </nav>
           <div className="flex items-center gap-4">
-            <Link to="/login" className="text-sm font-medium hover:underline underline-offset-4">
+            <Link to="/sign-in" className="text-sm font-medium hover:underline underline-offset-4">
               Log in
             </Link>
-            <Button>Get Started</Button>
+            <Link to='sign-up'>
+            <Button>Get Started</Button></Link>
           </div>
         </div>
       </header>

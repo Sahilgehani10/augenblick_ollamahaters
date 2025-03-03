@@ -8,6 +8,7 @@ export const SignInPage = () => {
           path="/sign-in"
           routing="path"
           signUpUrl="/sign-up"
+          afterSignInUrl="/home"
           appearance={{
             elements: {
               formButtonPrimary: "bg-blue-600 hover:bg-blue-700",

@@ -6,11 +6,13 @@ import NewLandingPage from "./components/NewLandingPage";
 import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import { SignInPage } from "./components/SignInPage";
 import { SignUpPage } from "./components/SignUpPage";
+import { ThemeProvider } from "./components/providers/Themeprovider";
 
 function App() {
   return (
-    
+    <ThemeProvider>
       <div className="app">
+        
         <Router>
           <Routes>
             {/* Public route */}
@@ -49,7 +51,9 @@ function App() {
             <Route path="/sign-up/*" element={<SignUpPage />} />
           </Routes>
         </Router>
+        
       </div>
+      </ThemeProvider>
     
   );
 }
