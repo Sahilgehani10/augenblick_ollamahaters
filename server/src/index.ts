@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
-import { getAllDocuments, findOrCreateDocument, updateDocument } from "./controllers/documentController";
+import { getAllDocuments, findOrCreateDocument, updateDocument,getDocumentVersions,createVersionOnDisconnect } from "./controllers/documentController";
 import { createClerkClient } from '@clerk/clerk-sdk-node';
 
 const clerk = createClerkClient({
@@ -31,19 +31,22 @@ function updateActiveUsers(documentId: string, user: ActiveUser, isJoining: bool
   if (!activeUsers.has(documentId)) {
     activeUsers.set(documentId, new Map());
   }
-  
+
   const usersMap = activeUsers.get(documentId)!;
-  
+
   if (isJoining) {
     usersMap.set(user.userId, user);
-    console.log(`User ${user.name} joined document ${documentId}. Active users count: ${usersMap.size}`);
   } else {
     usersMap.delete(user.userId);
-    console.log(`User ${user.name} left document ${documentId}. Active users count: ${usersMap.size}`);
   }
-  
-  io.to(documentId).emit("active-users", Array.from(usersMap.values()));
+
+  // Emit the updated list of active users
+  const usersArray = Array.from(usersMap.values());
+  console.log(`Emitting active users for document ${documentId}:`, usersArray); // Log the data being emitted
+  io.to(documentId).emit("active-users", usersArray);
 }
+
+
 
 const io = new Server(PORT, {
   cors: {
@@ -56,6 +59,7 @@ io.on("connection", async (socket) => {
   console.log("New client connected:", socket.id);
   let currentDocumentId: string | null = null;
   let currentUser: ActiveUser | null = null;
+  let hasChanges = false;
 
   // Authenticate user
   socket.on("authenticate", async (token: string) => {
@@ -80,7 +84,7 @@ io.on("connection", async (socket) => {
       console.error("Authentication failed:", error);
     }
   });
-
+  
   // Handle fetching all documents
   socket.on('get-all-documents', async () => {
     try {
@@ -91,44 +95,76 @@ io.on("connection", async (socket) => {
       socket.emit('all-documents', []);
     }
   });
-
+  
   // Handle joining a document
   socket.on("get-document", async ({ documentId, documentName }) => {
     try {
-      currentDocumentId = documentId;
+      // Save the documentId in the socket object
+      socket.data.documentId = documentId;
       socket.join(documentId);
-      console.log(`Socket ${socket.id} joined document ${documentId}`);
-
+      console.log(`[get-document] Socket ${socket.id} joined document ${documentId}`);
+  
       // Initialize or find the document
       const document = await findOrCreateDocument({ documentId, documentName });
       if (document) {
         socket.emit("load-document", document.data);
       }
-
+  
       // Update active users if the user is authenticated
       if (currentUser) {
         updateActiveUsers(documentId, currentUser, true);
       }
-
+  
       // Listen for changes and broadcast them
       socket.on("send-changes", delta => {
         socket.broadcast.to(documentId).emit("receive-changes", delta);
+        hasChanges=true;
       });
-
+  
       // Listen for save-document event and update the document
       socket.on("save-document", async (data) => {
-        await updateDocument(documentId, { data });
+        if (currentUser) {
+          await updateDocument(documentId, data);
+          hasChanges=false;
+        }
       });
     } catch (error) {
       console.error("Document error:", error);
     }
   });
+  socket.on("get-document-versions", async () => {
+    try {
+      // Retrieve documentId from the socket object
+      const documentId = socket.data.documentId;
+      if (!documentId) {
+        console.error(`[get-document-versions] Document ID not found for socket: ${socket.id}`);
+        throw new Error("Document ID not found");
+      }
+  
+      console.log(`[get-document-versions] Fetching versions for document ${documentId}`);
+      const versions = await getDocumentVersions(documentId);
+  
+      console.log(`[get-document-versions] Sending ${versions.length} versions to socket ${socket.id}`);
+      socket.emit("document-versions", versions);
+    } catch (error) {
+      console.error("Error fetching document versions:", error);
+      socket.emit("document-versions", []);
+    }
+  });
 
   // Handle disconnection and update active users list
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("Socket disconnected:", socket.id);
-    if (currentDocumentId && currentUser) {
-      updateActiveUsers(currentDocumentId, currentUser, false);
+
+    const documentId = socket.data.documentId;
+    if (documentId && currentUser && hasChanges) {
+      console.log(`Creating a new version for document ${documentId}...`);
+      await createVersionOnDisconnect(documentId, currentUser.userId);
+    }
+
+    // Update active users list
+    if (documentId && currentUser) {
+      updateActiveUsers(documentId, currentUser, false);
     }
   });
 });

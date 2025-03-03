@@ -43,6 +43,7 @@ export const TextEditor = () => {
     const debouncedFetch = useDebounce(fetchCorrections, 1000);
     const debouncedAutocomplete = useDebounce(fetchAutocomplete, 500);
     const [position, setPosition] = useState({ top: 0, left: 0 });
+    const [documentVersions, setDocumentVersions] = useState<any[]>([]);
     const cursorPositionRef = useRef<{ index: number; length: number }>({ index: 0, length: 0 });
 
     const handleSave = () => {
@@ -56,6 +57,16 @@ export const TextEditor = () => {
         a.click();
         URL.revokeObjectURL(url);
     };
+    const fetchDocumentVersions = useCallback(async () => {
+        if (socket) {
+            console.log("Requesting document versions from server...");
+          socket.emit("get-document-versions");
+        }
+      }, [socket]);
+      
+      useEffect(() => {
+        fetchDocumentVersions();
+      }, [fetchDocumentVersions]);
 
     useEffect(() => {
         const skt = io(SERVER_URL);
@@ -94,7 +105,7 @@ export const TextEditor = () => {
             socket.off("active-users");
         };
     }, [socket, clerkUser, getToken]);
-
+    
     const wrapperRef = useCallback((wrapper: HTMLDivElement) => {
         if (!wrapper) return;
         wrapper.innerHTML = '';
@@ -179,6 +190,33 @@ export const TextEditor = () => {
             localStorage.clear();
         };
     }, [socket, quill]);
+    //versions
+    useEffect(() => {
+        if (!socket || !documentId) return;
+      
+        // Emit the get-document event first
+        socket.emit("get-document", {
+          documentId,
+          documentName: localStorage.getItem(`document-name-for-${documentId}`) || "Untitled",
+        });
+      
+        // Fetch versions after joining the document
+        console.log("Requesting document versions from server...");
+        socket.emit("get-document-versions");
+      
+        const handleDocumentVersions = (versions: any[]) => {
+          console.log("Received document versions from server:", versions);
+          setDocumentVersions(versions);
+        };
+      
+        socket.on("document-versions", handleDocumentVersions);
+      
+        return () => {
+          socket.off("document-versions", handleDocumentVersions);
+        };
+      }, [socket, documentId]);
+
+    
 
     async function fetchCorrections(text: string) {
         try {
@@ -282,21 +320,47 @@ export const TextEditor = () => {
             <button style={styles.saveButton} onClick={handleSave}>
                 Save as Word File
             </button>
-            
+            {/*activeusers*/}
             <div style={styles.activeUsersContainer}>
-                <h4 style={styles.activeUsersHeading}>Currently Editing:</h4>
-                {activeUsers.map((user) => (
-                    <div key={user.userId} style={styles.userBadge}>
-                        <img 
-                            src={user.imageUrl} 
-                            alt={user.name}
-                            style={styles.userAvatar}
-                        />
-                        <span style={styles.userName}>{user.name}</span>
-                    </div>
-                ))}
-            </div>
-
+  <h4 style={styles.activeUsersHeading}>Currently Editing:</h4>
+  {activeUsers.length > 0 ? (
+    activeUsers.map((user) => (
+      <div key={user.userId} style={styles.userBadge}>
+        <img
+          src={user.imageUrl}
+          alt={user.name}
+          style={styles.userAvatar}
+        />
+        <span style={styles.userName}>{user.name}</span>
+      </div>
+    ))
+  ) : (
+    <p>No other users are currently editing.</p>
+  )}
+</div>
+            {/*versions*/}
+            <div style={styles.versionsContainer}>
+      <h4 style={styles.versionsHeading}>Document Versions:</h4>
+      {documentVersions.map((version, index) => (
+        <div key={index} style={styles.versionItem}>
+          <p style={styles.versionInfo}>
+            Version {index + 1} - {new Date(version.createdAt).toLocaleString()}
+          </p>
+          <p style={styles.versionUser}>Updated by: {version.updatedBy}</p>
+          <button
+            style={styles.restoreButton}
+            onClick={() => {
+              if (quill) {
+                quill.setContents(version.data);
+              }
+            }}
+          >
+            Restore
+          </button>
+        </div>
+      ))}
+    </div>
+            {/*editor*/}
             <div ref={wrapperRef} style={styles.editor}></div>
             
             {suggestions && (
@@ -436,7 +500,50 @@ const styles = {
         ':hover': {
             backgroundColor: '#f5f5f5'
         }
-    }
+    },
+    versionsContainer: {
+        position: 'fixed' as const,
+        top: '1rem',
+        left: '1rem',
+        backgroundColor: 'white',
+        padding: '1rem',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        zIndex: 1000,
+        maxWidth: '300px',
+        maxHeight: '400px',
+        overflowY: 'auto' as const,
+      },
+      versionsHeading: {
+        margin: '0 0 1rem 0',
+        fontSize: '1rem',
+        color: '#2c3e50',
+      },
+      versionItem: {
+        marginBottom: '1rem',
+        padding: '0.5rem',
+        borderBottom: '1px solid #ddd',
+      },
+      versionInfo: {
+        margin: '0 0 0.5rem 0',
+        fontSize: '0.9rem',
+        color: '#34495e',
+      },
+      versionUser: {
+        margin: '0 0 0.5rem 0',
+        fontSize: '0.8rem',
+        color: '#7f8c8d',
+      },
+      restoreButton: {
+        padding: '0.25rem 0.5rem',
+        fontSize: '0.8rem',
+        backgroundColor: '#3498db',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+      },
+    
 };
 
 export default TextEditor;
