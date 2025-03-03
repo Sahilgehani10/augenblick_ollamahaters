@@ -134,11 +134,7 @@ export const TextEditor = () => {
         socket.on("load-document", loadHandler);
         socket.emit("get-document", { 
             documentId,
-<<<<<<< HEAD
-            documentName: localStorage.getItem(documentNameFor_${documentId}) || "Untitled",
-=======
             documentName: localStorage.getItem(`documentNameFor_${documentId}`) || "Untitled"
->>>>>>> 483b92b182953a231ea4dadba7e5b4ca7eefc010
         });
 
         return () => { socket.off("load-document", loadHandler); };
@@ -169,11 +165,7 @@ export const TextEditor = () => {
             const chatCompletion = await groq.chat.completions.create({
                 messages: [{
                     role: "user",
-<<<<<<< HEAD
-                    content: Please correct and suggest improvements for:\n\n${text}
-=======
                     content: `Please correct and suggest improvements for:\n\n${text}`
->>>>>>> 483b92b182953a231ea4dadba7e5b4ca7eefc010
                 }],
                 model: "mixtral-8x7b-32768"
             });
@@ -193,11 +185,7 @@ export const TextEditor = () => {
             const chatCompletion = await groq.chat.completions.create({
                 messages: [{
                     role: "user",
-<<<<<<< HEAD
-                    content: Suggest 3 autocompletions for this text: "${text}"
-=======
                     content: `Suggest 3 autocompletions for this text: "${text}"`
->>>>>>> 483b92b182953a231ea4dadba7e5b4ca7eefc010
                 }],
                 model: "mixtral-8x7b-32768",
                 max_tokens: 50
@@ -387,8 +375,4 @@ const styles = {
     }
 };
 
-<<<<<<< HEAD
 export default TextEditor;
-=======
-export default TextEditor;
->>>>>>> 483b92b182953a231ea4dadba7e5b4ca7eefc010
