@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useTheme } from "./providers/Themeprovider"; // Adjust path as needed
+import { ThemeToggle } from "../components/ThemeToggle"; 
 import {
   BookOpen,
   BrainCircuit,
@@ -17,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const NewLandingPage: React.FC = () => {
+  const { theme } = useTheme();
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -40,6 +43,7 @@ const NewLandingPage: React.FC = () => {
             </a>
           </nav>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Link to="/sign-in" className="text-sm font-medium hover:underline underline-offset-4">
               Log in
             </Link>
