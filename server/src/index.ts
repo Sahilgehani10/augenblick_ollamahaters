@@ -2,15 +2,27 @@ import { Server } from "socket.io";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
-import { getAllDocuments, findOrCreateDocument, updateDocument, getDocumentVersions, createVersionOnDisconnect } from "./controllers/documentController";
+import { 
+  getAllDocuments, 
+  findOrCreateDocument, 
+  updateDocument, 
+  getDocumentVersions, 
+  createVersionOnDisconnect 
+} from "./controllers/documentController";
 import { createClerkClient } from '@clerk/clerk-sdk-node';
-
-import express from "express";
 import axios from "axios";
-import cors from "cors"; // To handle CORS issues
+import cors from "cors";
 import { createServer } from "http";
 
-
+// Create a Comment model for persistent comments
+const CommentSchema = new mongoose.Schema({
+  documentId: { type: String, required: true },
+  text: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  createdBy: { type: String, required: true },
+  userName: { type: String, required: true },
+});
+const CommentModel = mongoose.model("Comment", CommentSchema);
 
 const clerk = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY
@@ -60,8 +72,6 @@ const io = new Server(PORT, {
   },
 });
 
-
-
 io.on("connection", async (socket) => {
   console.log("New client connected:", socket.id);
   let currentDocumentId: string | null = null;
@@ -108,7 +118,7 @@ io.on("connection", async (socket) => {
     try {
       // Save the documentId in both socket.data and the local variable
       socket.data.documentId = documentId;
-      currentDocumentId = documentId;  // <-- This assignment is crucial!
+      currentDocumentId = documentId;  
       
       socket.join(documentId);
       console.log(`[get-document] Socket ${socket.id} joined document ${documentId}`);
@@ -123,6 +133,10 @@ io.on("connection", async (socket) => {
       if (currentUser) {
         updateActiveUsers(documentId, currentUser, true);
       }
+
+      // Load previously saved comments for the document
+      const savedComments = await CommentModel.find({ documentId }).sort({ createdAt: 1 });
+      socket.emit("comments", savedComments);
   
       // Listen for changes and broadcast them
       socket.on("send-changes", delta => {
@@ -137,6 +151,22 @@ io.on("connection", async (socket) => {
           hasChanges = false;
         }
       });
+
+      // Listen for comments, save them, and broadcast them to other users
+      socket.on("send-comment", async (comment) => {
+        try {
+          // Save comment in the database
+          await CommentModel.create(comment);
+        } catch (err) {
+          console.error("Error saving comment:", err);
+        }
+        // Broadcast the comment to others
+        const docId = socket.data.documentId;
+        if (docId) {
+          socket.to(docId).emit("receive-comment", comment);
+        }
+      });
+      
     } catch (error) {
       console.error("Document error:", error);
     }
@@ -178,6 +208,3 @@ io.on("connection", async (socket) => {
     }
   });
 });
-
-
-

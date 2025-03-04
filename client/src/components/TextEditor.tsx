@@ -8,12 +8,21 @@ import { io, type Socket } from "socket.io-client"
 import { useParams } from "react-router-dom"
 import Groq from "groq-sdk"
 import { useAuth, useUser } from "@clerk/clerk-react"
-import { Save, FileText, Users, History, Lightbulb, Wand2 } from "lucide-react"
+import { Save, FileText, Users, History, Lightbulb, Wand2, MessageSquare, Download } from "lucide-react"
+import { jsPDF } from "jspdf"  // Directly import jsPDF
 
 interface ActiveUser {
   userId: string
   name: string
   imageUrl: string
+}
+
+interface Comment {
+  documentId: string | undefined
+  text: string
+  createdAt: number
+  createdBy: string | undefined
+  userName: string
 }
 
 const groq = new Groq({
@@ -44,8 +53,15 @@ export const TextEditor = () => {
   const { getToken } = useAuth()
   const { user: clerkUser } = useUser()
   const debouncedFetch = useDebounce(fetchCorrections, 1000)
-  const [setPosition] = useState({ top: 0, left: 0 }) // Fixed: Added setPosition to state
+  const [setPosition] = useState({ top: 0, left: 0 })
   const cursorPositionRef = useRef<{ index: number; length: number }>({ index: 0, length: 0 })
+
+  // New state for comments
+  const [comments, setComments] = useState<Comment[]>([])
+  const [commentText, setCommentText] = useState<string>("")
+
+  // New state for export format selection
+  const [exportFormat, setExportFormat] = useState<string>("doc")
 
   // Save document as a Word file
   const handleSave = () => {
@@ -60,15 +76,44 @@ export const TextEditor = () => {
     URL.revokeObjectURL(url)
   }
 
-  // New function: Generate a template using AI and insert it into the editor.
+  // Export functionality to convert and export in different formats (HTML removed)
+  const handleExport = (fileType: string) => {
+    if (!quill) return
+    let blob: Blob | undefined
+    let fileName = "document"
+    if (fileType === "doc") {
+      const text = quill.getText()
+      blob = new Blob([text], { type: "application/msword" })
+      fileName += ".doc"
+    } else if (fileType === "txt") {
+      const text = quill.getText()
+      blob = new Blob([text], { type: "text/plain" })
+      fileName += ".txt"
+    } else if (fileType === "pdf") {
+      const doc = new jsPDF()
+      const text = quill.getText()
+      const lines = doc.splitTextToSize(text, 180)
+      doc.text(lines, 10, 10)
+      doc.save("document.pdf")
+      return
+    }
+    if (blob) {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = fileName
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+  }
+
+  // Generate template using AI and insert it into the editor.
   const handleGenerateTemplate = async () => {
     if (!quill) return
-    // Prompt the user for the type of template they want
     const templateType = prompt("Enter the type of template you want to generate:")
     if (!templateType) return
 
     try {
-      // Request AI to generate a template based on the specified type.
       const chatCompletion = await groq.chat.completions.create({
         messages: [
           {
@@ -81,7 +126,6 @@ export const TextEditor = () => {
       })
       const generatedTemplate = chatCompletion.choices[0]?.message?.content?.trim()
       if (generatedTemplate) {
-        // Insert the generated template at the current cursor position.
         const selection = quill.getSelection()
         const index = selection ? selection.index : quill.getLength()
         quill.insertText(index, generatedTemplate)
@@ -92,7 +136,6 @@ export const TextEditor = () => {
     }
   }
 
-  // Request document versions from the server
   const fetchDocumentVersions = useCallback(async () => {
     if (socket) {
       console.log("Requesting document versions from server...")
@@ -120,9 +163,8 @@ export const TextEditor = () => {
     return () => {
       skt.disconnect()
     }
-  }, [quill]) // Added quill as a dependency
+  }, [quill])
 
-  // Authenticate with Clerk and listen for active users
   useEffect(() => {
     if (!socket || !clerkUser) return
     console.log("Client: clerkUser available, proceeding with authentication")
@@ -146,7 +188,26 @@ export const TextEditor = () => {
     }
   }, [socket, clerkUser, getToken])
 
-  // Setup the Quill editor and add image upload support via the toolbar
+  useEffect(() => {
+    if (!socket) return
+    socket.on("receive-comment", (comment: Comment) => {
+      setComments((prev) => [...prev, comment])
+    })
+    return () => {
+      socket.off("receive-comment")
+    }
+  }, [socket])
+
+  useEffect(() => {
+    if (!socket) return
+    socket.on("comments", (savedComments: Comment[]) => {
+      setComments(savedComments)
+    })
+    return () => {
+      socket.off("comments")
+    }
+  }, [socket])
+
   const wrapperRef = useCallback(
     (wrapper: HTMLDivElement) => {
       if (!wrapper) return
@@ -165,7 +226,6 @@ export const TextEditor = () => {
       qul.setText("Loading...")
       setQuill(qul)
 
-      // Image upload handler via toolbar image button
       qul.getModule("toolbar").addHandler("image", () => {
         const input = document.createElement("input")
         input.setAttribute("type", "file")
@@ -190,7 +250,6 @@ export const TextEditor = () => {
         }
       })
 
-      // Track cursor position for potential positioning
       qul.on("selection-change", (range) => {
         if (range) {
           cursorPositionRef.current = range
@@ -203,9 +262,8 @@ export const TextEditor = () => {
       })
     },
     [setPosition],
-  ) // Fixed: Added setPosition as a dependency
+  )
 
-  // Send and receive document changes
   useEffect(() => {
     if (!socket || !quill) return
 
@@ -234,7 +292,6 @@ export const TextEditor = () => {
     }
   }, [socket, quill])
 
-  // Load document from server
   useEffect(() => {
     if (!socket || !quill) return
 
@@ -254,7 +311,6 @@ export const TextEditor = () => {
     }
   }, [socket, quill, documentId])
 
-  // Auto-save document periodically
   useEffect(() => {
     if (!socket || !quill) return
 
@@ -268,7 +324,6 @@ export const TextEditor = () => {
     }
   }, [socket, quill])
 
-  // Listen for document version updates from the server
   useEffect(() => {
     if (!socket || !documentId) return
     console.log("Requesting document versions from server...")
@@ -286,7 +341,6 @@ export const TextEditor = () => {
     }
   }, [socket, documentId])
 
-  // AI corrections using Groq API (using custom aiTemplate)
   async function fetchCorrections(text: string) {
     try {
       if (!text.trim() || text === "Loading...") {
@@ -310,7 +364,6 @@ export const TextEditor = () => {
     }
   }
 
-  // Trigger AI corrections on text-change
   useEffect(() => {
     if (!quill) return
 
@@ -323,7 +376,6 @@ export const TextEditor = () => {
     return () => quill.off("text-change", handler)
   }, [quill, debouncedFetch])
 
-  // Existing keydown handler for Tab-triggered autocomplete remains unchanged
   useEffect(() => {
     const handleTabKey = async (e: KeyboardEvent) => {
       if (e.key === "Tab") {
@@ -365,9 +417,24 @@ export const TextEditor = () => {
     return () => document.removeEventListener("keydown", handleTabKey)
   }, [quill])
 
+  const handleCommentSubmit = () => {
+    if (!socket || !documentId) return
+    if (!commentText.trim()) return
+
+    const comment: Comment = {
+      documentId,
+      text: commentText,
+      createdAt: Date.now(),
+      createdBy: clerkUser?.id,
+      userName: clerkUser?.fullName || "Anonymous",
+    }
+    socket.emit("send-comment", comment)
+    setComments((prev) => [...prev, comment])
+    setCommentText("")
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-      {/* Header */}
       <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm p-4 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -408,7 +475,6 @@ export const TextEditor = () => {
       </header>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 flex flex-col gap-6">
-        {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
           <button
             onClick={handleSave}
@@ -425,18 +491,32 @@ export const TextEditor = () => {
             <Wand2 className="h-4 w-4" />
             Generate Template
           </button>
+
+          {/* Export Section with dark-themed dropdown (HTML option removed) */}
+          <select
+            value={exportFormat}
+            onChange={(e) => setExportFormat(e.target.value)}
+            className="p-2 bg-gray-800 text-white border border-gray-600 rounded-lg"
+          >
+            <option value="doc">Word (.doc)</option>
+            <option value="pdf">PDF (.pdf)</option>
+            <option value="txt">Plain Text (.txt)</option>
+          </select>
+          <button
+            onClick={() => handleExport(exportFormat)}
+            className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-md"
+          >
+            <Download className="h-4 w-4" />
+            Export Document
+          </button>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Main Content Area */}
           <div className="flex-1 flex flex-col gap-6">
-            {/* Editor */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-violet-100 dark:border-violet-900/20 h-[500px] overflow-y-auto">
-                <div ref={wrapperRef} className="h-full"></div>
+              <div ref={wrapperRef} className="h-full"></div>
             </div>
 
-
-            {/* AI Suggestions */}
             {showSuggestions && suggestions && (
               <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-lg border border-violet-100 dark:border-violet-900/20 p-5 animate-fade-in max-h-[300px] overflow-y-auto">
                 <div className="flex items-center gap-2 mb-3">
@@ -456,9 +536,7 @@ export const TextEditor = () => {
             )}
           </div>
 
-          {/* Side Panels */}
           <div className="lg:w-80 flex flex-col gap-6">
-            {/* Active Users */}
             {showUsers && (
               <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-lg border border-violet-100 dark:border-violet-900/20 p-5 animate-fade-in">
                 <div className="flex items-center gap-2 mb-4">
@@ -492,7 +570,6 @@ export const TextEditor = () => {
               </div>
             )}
 
-            {/* Document Versions */}
             {showVersions && (
               <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-lg border border-violet-100 dark:border-violet-900/20 p-5 max-h-[500px] overflow-y-auto animate-fade-in">
                 <div className="flex items-center gap-2 mb-4">
@@ -536,6 +613,48 @@ export const TextEditor = () => {
                 )}
               </div>
             )}
+
+            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-lg border border-violet-100 dark:border-violet-900/20 p-5 max-h-[500px] overflow-y-auto animate-fade-in">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="bg-gradient-to-r from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 p-2 rounded-lg">
+                  <MessageSquare className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-lg font-semibold bg-gradient-to-r from-green-600 to-green-700 text-transparent bg-clip-text">
+                  Comments
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {comments.length > 0 ? (
+                  comments.map((comment, index) => (
+                    <div
+                      key={index}
+                      className="p-2 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/20"
+                    >
+                      <p className="font-medium text-gray-800 dark:text-gray-200">{comment.userName}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{comment.text}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(comment.createdAt).toLocaleString()}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-600 dark:text-gray-400 italic">No comments yet.</p>
+                )}
+              </div>
+              <div className="mt-4">
+                <textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Add a comment..."
+                  className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                  rows={3}
+                />
+                <button
+                  onClick={handleCommentSubmit}
+                  className="mt-2 w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                >
+                  Post Comment
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -544,4 +663,3 @@ export const TextEditor = () => {
 }
 
 export default TextEditor
-
