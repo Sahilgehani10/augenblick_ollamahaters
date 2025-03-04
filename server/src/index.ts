@@ -2,13 +2,12 @@ import { Server } from "socket.io";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
-import { getAllDocuments, findOrCreateDocument, updateDocument,getDocumentVersions,createVersionOnDisconnect } from "./controllers/documentController";
+import { getAllDocuments, findOrCreateDocument, updateDocument, getDocumentVersions, createVersionOnDisconnect } from "./controllers/documentController";
 import { createClerkClient } from '@clerk/clerk-sdk-node';
 
 const clerk = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY
 });
-
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -42,11 +41,9 @@ function updateActiveUsers(documentId: string, user: ActiveUser, isJoining: bool
 
   // Emit the updated list of active users
   const usersArray = Array.from(usersMap.values());
-  console.log(`Emitting active users for document ${documentId}:`, usersArray); // Log the data being emitted
+  console.log(`Emitting active users for document ${documentId}:`, usersArray);
   io.to(documentId).emit("active-users", usersArray);
 }
-
-
 
 const io = new Server(PORT, {
   cors: {
@@ -66,13 +63,13 @@ io.on("connection", async (socket) => {
     try {
       const decoded = await clerk.verifyToken(token);
       const user = await clerk.users.getUser(decoded.sub);
-    console.log("Fetched user details:", user);
+      console.log("Fetched user details:", user);
 
-    currentUser = {
-      userId: decoded.sub,
-      name: `${user.firstName} ${user.lastName}`.trim() || "Anonymous",
-      imageUrl: user.imageUrl || "",
-    };
+      currentUser = {
+        userId: decoded.sub,
+        name: `${user.firstName} ${user.lastName}`.trim() || "Anonymous",
+        imageUrl: user.imageUrl || "",
+      };
       
       console.log("User authenticated:", currentUser);
 
@@ -99,8 +96,10 @@ io.on("connection", async (socket) => {
   // Handle joining a document
   socket.on("get-document", async ({ documentId, documentName }) => {
     try {
-      // Save the documentId in the socket object
+      // Save the documentId in both socket.data and the local variable
       socket.data.documentId = documentId;
+      currentDocumentId = documentId;  // <-- This assignment is crucial!
+      
       socket.join(documentId);
       console.log(`[get-document] Socket ${socket.id} joined document ${documentId}`);
   
@@ -118,20 +117,21 @@ io.on("connection", async (socket) => {
       // Listen for changes and broadcast them
       socket.on("send-changes", delta => {
         socket.broadcast.to(documentId).emit("receive-changes", delta);
-        hasChanges=true;
+        hasChanges = true;
       });
   
       // Listen for save-document event and update the document
       socket.on("save-document", async (data) => {
         if (currentUser) {
           await updateDocument(documentId, data);
-          hasChanges=false;
+          hasChanges = false;
         }
       });
     } catch (error) {
       console.error("Document error:", error);
     }
   });
+
   socket.on("get-document-versions", async () => {
     try {
       // Retrieve documentId from the socket object
