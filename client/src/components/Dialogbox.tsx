@@ -38,7 +38,7 @@ export function Dialogbox() {
           <div className="absolute inset-0 bg-gradient-to-br from-violet-50/80 to-purple-50/80 dark:from-violet-900/10 dark:to-purple-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
           <img
             className="h-full w-full cursor-pointer object-contain relative z-10"
-            src={Img2 || "/placeholder.svg"}
+            src={"https://img.freepik.com/premium-psd/create-new-document-3d-icon_465216-395.jpg?w=900"}
             alt="Create new document"
           />
         </div>
