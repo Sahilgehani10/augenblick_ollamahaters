@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
 import { useTheme } from "./providers/Themeprovider"; // Adjust path as needed
 import { ThemeToggle } from "../components/ThemeToggle"; 
+import collab from "../assets/collab.jpg";
+import productivity from "../assets/produce.jpg";
+import test2 from "../assets/test2.png";
+import test1 from "../assets/test1.png";
+import test3 from "../assets/test3.png";
+import genai from "../assets/genai.jpeg";
 import {
   BookOpen,
   BrainCircuit,
@@ -34,9 +40,6 @@ const NewLandingPage: React.FC = () => {
             </a>
             <a href="#how-it-works" className="text-sm font-medium hover:underline underline-offset-4">
               How It Works
-            </a>
-            <a href="#pricing" className="text-sm font-medium hover:underline underline-offset-4">
-              Pricing
             </a>
             <a href="#testimonials" className="text-sm font-medium hover:underline underline-offset-4">
               Testimonials
@@ -89,7 +92,7 @@ const NewLandingPage: React.FC = () => {
               </div>
               <div className="relative aspect-video overflow-hidden rounded-xl border bg-muted lg:aspect-square">
                 <img
-                  src="/placeholder.svg"
+                  src={collab}
                   alt="Screenshot of the collaborative editor interface"
                   className="object-cover w-full h-full"
                 />
@@ -201,7 +204,7 @@ const NewLandingPage: React.FC = () => {
             </div>
             <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 md:grid-cols-2">
               <img
-                src="/placeholder.svg"
+                src={genai}
                 alt="Collaborative editing in action"
                 className="mx-auto aspect-video overflow-hidden rounded-xl object-cover object-center sm:w-full"
               />
@@ -318,7 +321,7 @@ const NewLandingPage: React.FC = () => {
               </div>
               <div className="relative aspect-video overflow-hidden rounded-xl border bg-background lg:aspect-square">
                 <img
-                  src="/placeholder.svg"
+                  src={productivity}
                   alt="AI writing assistant in action"
                   className="object-cover w-full h-full"
                 />
@@ -352,129 +355,6 @@ const NewLandingPage: React.FC = () => {
           </div>
         </section>
 
-        <section id="pricing" className="py-12 md:py-24 lg:py-32">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <div className="inline-block rounded-lg bg-primary px-3 py-1 text-sm text-primary-foreground">
-                  Pricing
-                </div>
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Simple, transparent pricing</h2>
-                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Choose the plan that's right for you and your team.
-                </p>
-              </div>
-            </div>
-            <div className="mx-auto grid max-w-5xl gap-6 py-12 lg:grid-cols-3">
-              <div className="flex flex-col rounded-lg border bg-background p-6">
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bold">Free</h3>
-                  <p className="text-muted-foreground">For individuals and small projects</p>
-                </div>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-bold">$0</span>
-                  <span className="ml-1 text-muted-foreground">/month</span>
-                </div>
-                <ul className="mt-6 space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Up to 3 documents</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Basic collaboration</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Limited AI suggestions</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>7-day version history</span>
-                  </li>
-                </ul>
-                <Button className="mt-8" variant="outline">
-                  Get started
-                </Button>
-              </div>
-              <div className="flex flex-col rounded-lg border bg-background p-6 shadow-lg ring-2 ring-primary">
-                <div className="space-y-2">
-                  <div className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    Most Popular
-                  </div>
-                  <h3 className="text-2xl font-bold">Pro</h3>
-                  <p className="text-muted-foreground">For professionals and teams</p>
-                </div>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-bold">$12</span>
-                  <span className="ml-1 text-muted-foreground">/month per user</span>
-                </div>
-                <ul className="mt-6 space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Unlimited documents</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Advanced collaboration</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Full AI features</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>30-day version history</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Priority support</span>
-                  </li>
-                </ul>
-                <Button className="mt-8">Get started</Button>
-              </div>
-              <div className="flex flex-col rounded-lg border bg-background p-6">
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bold">Enterprise</h3>
-                  <p className="text-muted-foreground">For organizations with advanced needs</p>
-                </div>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-bold">Custom</span>
-                </div>
-                <ul className="mt-6 space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Everything in Pro</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Custom AI training</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Advanced security</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Unlimited version history</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>Dedicated support</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <span>SSO & advanced admin</span>
-                  </li>
-                </ul>
-                <Button className="mt-8" variant="outline">
-                  Contact sales
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section id="testimonials" className="py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
@@ -492,7 +372,7 @@ const NewLandingPage: React.FC = () => {
               <div className="flex flex-col rounded-lg border bg-background p-6">
                 <div className="flex items-center gap-4">
                   <img
-                    src="/placeholder.svg"
+                    src={test1}
                     alt="User avatar"
                     className="rounded-full h-12 w-12"
                   />
@@ -509,7 +389,7 @@ const NewLandingPage: React.FC = () => {
               <div className="flex flex-col rounded-lg border bg-background p-6">
                 <div className="flex items-center gap-4">
                   <img
-                    src="/placeholder.svg"
+                    src={test2}
                     alt="User avatar"
                     className="rounded-full h-12 w-12"
                   />
@@ -526,7 +406,7 @@ const NewLandingPage: React.FC = () => {
               <div className="flex flex-col rounded-lg border bg-background p-6">
                 <div className="flex items-center gap-4">
                   <img
-                    src="/placeholder.svg"
+                    src={test3}
                     alt="User avatar"
                     className="rounded-full h-12 w-12"
                   />
