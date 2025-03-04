@@ -1,0 +1,214 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 262.1 83.3% 96.9%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 262.1 83.3% 57.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 262.1 30% 20%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 262.1 83.3% 57.8%;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Quill Editor Custom Styling */
+.ql-toolbar.ql-snow {
+  border-color: #e9d5ff !important;
+  background: linear-gradient(to right, #f5f3ff, #faf5ff) !important;
+  border-top-left-radius: 0.75rem !important;
+  border-top-right-radius: 0.75rem !important;
+  padding: 0.75rem !important;
+}
+
+.dark .ql-toolbar.ql-snow {
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  background: linear-gradient(to right, rgba(109, 40, 217, 0.1), rgba(139, 92, 246, 0.1)) !important;
+}
+
+.ql-container.ql-snow {
+  border-color: #e9d5ff !important;
+  border-bottom-left-radius: 0.75rem !important;
+  border-bottom-right-radius: 0.75rem !important;
+  font-family: "Inter", sans-serif !important;
+  font-size: 1rem !important;
+  min-height: 450px !important;
+}
+
+.dark .ql-container.ql-snow {
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+.ql-editor {
+  padding: 1.5rem !important;
+  min-height: 450px !important;
+}
+
+.dark .ql-editor {
+  color: #e2e8f0 !important;
+}
+
+.ql-snow .ql-stroke {
+  stroke: #6b7280 !important;
+}
+
+.dark .ql-snow .ql-stroke {
+  stroke: #9ca3af !important;
+}
+
+.ql-snow .ql-fill {
+  fill: #6b7280 !important;
+}
+
+.dark .ql-snow .ql-fill {
+  fill: #9ca3af !important;
+}
+
+.ql-snow .ql-picker {
+  color: #6b7280 !important;
+}
+
+.dark .ql-snow .ql-picker {
+  color: #9ca3af !important;
+}
+
+.ql-snow .ql-picker-options {
+  background-color: white !important;
+  border-color: #e9d5ff !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.dark .ql-snow .ql-picker-options {
+  background-color: #1f2937 !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+.ql-snow.ql-toolbar button:hover,
+.ql-snow .ql-toolbar button:hover,
+.ql-snow.ql-toolbar button.ql-active,
+.ql-snow .ql-toolbar button.ql-active,
+.ql-snow.ql-toolbar .ql-picker-label:hover,
+.ql-snow .ql-toolbar .ql-picker-label:hover,
+.ql-snow.ql-toolbar .ql-picker-item:hover {
+  color: #8b5cf6 !important;
+}
+
+.ql-snow.ql-toolbar button:hover .ql-stroke,
+.ql-snow .ql-toolbar button:hover .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.ql-snow .ql-toolbar button.ql-active .ql-stroke {
+  stroke: #8b5cf6 !important;
+}
+
+.ql-snow.ql-toolbar button:hover .ql-fill,
+.ql-snow .ql-toolbar button:hover .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-fill,
+.ql-snow .ql-toolbar button.ql-active .ql-fill {
+  fill: #8b5cf6 !important;
+}
+
+/* Custom scrollbar for version panel */
+.max-h-\[500px\]::-webkit-scrollbar {
+  width: 8px;
+}
+
+.max-h-\[500px\]::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.dark .max-h-\[500px\]::-webkit-scrollbar-track {
+  background: #2d3748;
+}
+
+.max-h-\[500px\]::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 10px;
+}
+
+.dark .max-h-\[500px\]::-webkit-scrollbar-thumb {
+  background: #7c3aed;
+}
+
+.max-h-\[500px\]::-webkit-scrollbar-thumb:hover {
+  background: #a78bfa;
+}
+
+.dark .max-h-\[500px\]::-webkit-scrollbar-thumb:hover {
+  background: #8b5cf6;
+}
+
+/* Override toolbar button and picker text color */
+.ql-toolbar.ql-snow button,
+.ql-toolbar.ql-snow .ql-picker {
+  color: #c91b1b !important;
+}
+
+/* Override icon stroke and fill colors */
+.ql-snow .ql-stroke {
+  stroke: #d31b1b !important;
+}
+
+.ql-snow .ql-fill {
+  fill: #aa0505 !important;
+}
+
+/* If you're using dark mode, ensure the overrides apply there as well */
+.dark .ql-toolbar.ql-snow button,
+.dark .ql-toolbar.ql-snow .ql-picker {
+  color: #c91212 !important;
+}

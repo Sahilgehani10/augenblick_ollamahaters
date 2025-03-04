@@ -5,11 +5,19 @@ dotenv.config();
 import { getAllDocuments, findOrCreateDocument, updateDocument, getDocumentVersions, createVersionOnDisconnect } from "./controllers/documentController";
 import { createClerkClient } from '@clerk/clerk-sdk-node';
 
+import express from "express";
+import axios from "axios";
+import cors from "cors"; // To handle CORS issues
+import { createServer } from "http";
+
+
+
 const clerk = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY
 });
 
 const PORT = Number(process.env.PORT || 3000);
+const EXPRESS_PORT = Number(process.env.EXPRESS_PORT) || 4000;
 
 /** Connect to MongoDB */
 mongoose.connect(process.env.DATABASE_URL || "", { dbName: "Google-Docs" })
@@ -51,6 +59,8 @@ const io = new Server(PORT, {
     methods: ["GET", "POST"],
   },
 });
+
+
 
 io.on("connection", async (socket) => {
   console.log("New client connected:", socket.id);
@@ -168,3 +178,6 @@ io.on("connection", async (socket) => {
     }
   });
 });
+
+
+
