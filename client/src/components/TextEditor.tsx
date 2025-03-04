@@ -71,7 +71,7 @@ export const TextEditor = () => {
 
   useEffect(() => {
     const skt = io(SERVER_URL);
-    
+  
     skt.on("connect", () => console.log("Connected to server"));
     skt.on("connect_error", (err) => {
       console.error("Connection error:", err);
@@ -80,10 +80,10 @@ export const TextEditor = () => {
         quill.setText("Connection error. Please refresh.");
       }
     });
-
+  
     setSocket(skt);
     return () => { skt.disconnect(); };
-  }, [quill]);
+  }, []);
 
   // Authenticate with Clerk and listen for active users
   useEffect(() => {
@@ -175,7 +175,13 @@ export const TextEditor = () => {
   
     const receiveHandler = (delta: any) => {
       const selection = quill.getSelection();
-      quill.updateContents(delta);
+  
+      // Temporarily remove the send handler to avoid triggering a remote change echo.
+      quill.off("text-change", sendHandler);
+      quill.updateContents(delta, 'api');
+      quill.on("text-change", sendHandler);
+  
+      // Restore selection after applying delta.
       if (selection) {
         setTimeout(() => quill.setSelection(selection), 0);
       }
@@ -189,6 +195,8 @@ export const TextEditor = () => {
       socket.off("receive-changes", receiveHandler);
     };
   }, [socket, quill]);
+  
+  
 
   // Load document from server
   useEffect(() => {
@@ -223,30 +231,26 @@ export const TextEditor = () => {
   }, [socket, quill]);
 
   // Listen for document version updates from the server
-  useEffect(() => {
-    if (!socket || !documentId) return;
-  
-    // Emit the get-document event first
-    socket.emit("get-document", {
-      documentId,
-      documentName: localStorage.getItem(`document-name-for-${documentId}`) || "Untitled",
-    });
-  
-    // Fetch versions after joining the document
-    console.log("Requesting document versions from server...");
-    socket.emit("get-document-versions");
-  
-    const handleDocumentVersions = (versions: any[]) => {
-      console.log("Received document versions from server:", versions);
-      setDocumentVersions(versions);
-    };
-  
-    socket.on("document-versions", handleDocumentVersions);
-  
-    return () => {
-      socket.off("document-versions", handleDocumentVersions);
-    };
-  }, [socket, documentId]);
+// Listen for document version updates from the server
+useEffect(() => {
+  if (!socket || !documentId) return;
+
+  // Only request document versions; the document itself was already loaded in a separate effect.
+  console.log("Requesting document versions from server...");
+  socket.emit("get-document-versions");
+
+  const handleDocumentVersions = (versions: any[]) => {
+    console.log("Received document versions from server:", versions);
+    setDocumentVersions(versions);
+  };
+
+  socket.on("document-versions", handleDocumentVersions);
+
+  return () => {
+    socket.off("document-versions", handleDocumentVersions);
+  };
+}, [socket, documentId]);
+
 
   // AI corrections using Groq API
   async function fetchCorrections(text: string) {
@@ -300,25 +304,29 @@ export const TextEditor = () => {
   // Watch for text changes to trigger corrections and autocomplete
   useEffect(() => {
     if (!quill) return;
-
-    const handler = (delta: any) => {
+  
+    const handler = (delta: any, oldContents: any, source: string) => {
+      // Only trigger autocomplete/corrections for user-originated changes
+      if (source !== 'user') return;
+  
       debouncedFetch(quill.getText());
-
+  
       const cursorPos = cursorPositionRef.current.index;
       const textBeforeCursor = quill.getText().slice(0, cursorPos);
       const words = textBeforeCursor.split(/\s+/);
       const lastWord = words[words.length - 1];
-
+  
       if (lastWord && lastWord.length > 2) {
         debouncedAutocomplete(lastWord);
       } else {
         setAutocompleteOpen(false);
       }
     };
-
+  
     quill.on("text-change", handler);
     return () => quill.off("text-change", handler);
   }, [quill, debouncedFetch, debouncedAutocomplete]);
+  
 
   // Handle keyboard events for autocomplete navigation/selection
   useEffect(() => {
